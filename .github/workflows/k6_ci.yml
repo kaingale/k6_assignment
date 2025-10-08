@@ -1,3 +1,4 @@
+
 name: K6 Performance Tests
 
 on:
@@ -5,10 +6,14 @@ on:
     branches: [main]
     types: [opened, synchronize, reopened]
   workflow_dispatch:
+    inputs:
+      test_file:
+        description: 'The k6 test file to run '
+        required: false
+        default: ''
 
 jobs:
   k6_tests:
-    if: github.head_ref == 'feature/k6_demo' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
 
     steps:
@@ -24,9 +29,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y k6
 
-      - name: Run all k6 tests in repo root
+      - name: Run test(s)
         run: |
-          for file in ./*.js; do
-            echo "Running $file"
-            k6 run "$file"
-          done
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.test_file }}" ]; then
+            echo "Manually running k6 test file: ${{ github.event.inputs.test_file }}"
+            k6 run "${{ github.event.inputs.test_file }}"
+          else
+            echo "Running all k6 tests on PR from feature/k6_demo"
+            for file in ./*.js; do
+              echo "Running $file"
+              k6 run "$file"
+            done
+          fi
+        shell: bash
+    if: github.head_ref == 'feature/k6_demo' || github.event_name == 'workflow_dispatch'
